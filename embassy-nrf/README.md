@@ -4,24 +4,32 @@ HALs implement safe, idiomatic Rust APIs to use the hardware capabilities, so ra
 
 The Embassy nRF HAL targets the Nordic Semiconductor nRF family of hardware. The HAL implements both blocking and async APIs
 for many peripherals. The benefit of using the async APIs is that the HAL takes care of waiting for peripherals to
-complete operations in low power mode and handling interrupts, so that applications can focus on more important matters.
+complete operations in low power mode and handling interrupts, so that applications can focus on more important matters. 
 
-NOTE: The Embassy HALs can be used both for non-async and async operations. For async, you can choose which runtime you want to use.
+For async, the crate can run on any executor. <!-- note: also mentioned below -->
 
 For a complete list of available peripherals and features, see the [embassy-nrf documentation](https://docs.embassy.dev/embassy-nrf).
+
+<!-- That's... just this same page (and likely older). Why is this link here? Which page actually provides the "complete list of available peripherals and features"?
+-->
 
 ## Hardware support
 
 The `embassy-nrf` HAL supports most variants of the nRF family:
 
-* nRF51 ([examples](https://github.com/embassy-rs/embassy/tree/main/examples/nrf51))
-* nRF52 ([examples](https://github.com/embassy-rs/embassy/tree/main/examples/nrf52840))
-* nRF53 ([examples](https://github.com/embassy-rs/embassy/tree/main/examples/nrf5340))
-* nRF91 ([examples](https://github.com/embassy-rs/embassy/tree/main/examples/nrf9160))
+||examples|comments|
+|---|---|---|
+|nRF51|[nrf51](https://github.com/embassy-rs/embassy/tree/main/examples/nrf51)|
+|nRF52|[nrf52840](https://github.com/embassy-rs/embassy/tree/main/examples/nrf52840)|
+|nRF53|[nrf5340](https://github.com/embassy-rs/embassy/tree/main/examples/nrf5340)|
+|nRF54|[nrf54l15](https://github.com/embassy-rs/embassy/tree/main/examples/nrf54l15)|nRF54L support is under construction<br />nRF54H is not supported, yet (plans?)|
+|nRF91|[nrf9160](https://github.com/embassy-rs/embassy/tree/main/examples/nrf9160)|
 
 Most peripherals are supported, but can vary between chip families. To check what's available, make sure to pick the MCU you're targeting in the top menu in the [documentation](https://docs.embassy.dev/embassy-nrf).
 
-For MCUs with TrustZone support, both Secure (S) and Non-Secure (NS) modes are supported. Running in Secure mode
+### TrustZone support
+
+For nRF53, nRF54L, nRF91, both Secure (S) and Non-Secure (NS) modes are supported. Running in Secure mode
 allows running Rust code without a SPM or TF-M binary, saving flash space and simplifying development.
 
 ## Time driver
@@ -47,14 +55,14 @@ you must link an `embassy-time` driver in your project.
 
 On nRF chips, peripherals can use the so called EasyDMA feature to offload the task of interacting
 with peripherals. It takes care of sending/receiving data over a variety of bus protocols (TWI/I2C, UART, SPI).
-However, EasyDMA requires the buffers used to transmit and receive data to reside in RAM. Unfortunately, Rust
-slices will not always do so. The following example using the SPI peripheral shows a common situation where this might happen:
+However, EasyDMA requires the buffers used to transmit and receive data to reside in RAM. Rust
+slices don't necessarily always do so. The following example shows a common situation where this might happen:
 
 ```rust,ignore
 // As we pass a slice to the function whose contents will not ever change,
 // the compiler writes it into the flash and thus the pointer to it will
 // reference static memory. Since EasyDMA requires slices to reside in RAM,
-// this function call will fail.
+// this function call will fail at runtime.
 let result = spim.write_from_ram(&[1, 2, 3]);
 assert_eq!(result, Err(Error::BufferNotInRAM));
 
